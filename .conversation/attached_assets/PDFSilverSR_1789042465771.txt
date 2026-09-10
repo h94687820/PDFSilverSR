@@ -1,0 +1,309 @@
+Act as a senior Android architect, PDF-engine developer, UI/UX designer, and performance engineer. Build a complete, production-ready Android PDF + Notebook application as a real installable APK.
+
+IMPORTANT:
+- This must be a true Android application, NOT a website, PWA, WebView wrapper, or web application packaged as an APK.
+- The application must work completely offline and must not depend on any remote server, cloud service, API, analytics service, or internet connection.
+- Prioritize real functionality, performance, stability, maintainability, and professional UX over superficial visual features.
+- Do not create a demo, mockup, prototype, or UI-only implementation.
+- Every visible control must perform its intended function.
+
+## 1. TECHNOLOGY ARCHITECTURE
+
+Choose the most appropriate native Android technologies for each subsystem.
+
+Use C++ where native-level performance is genuinely beneficial, especially for computationally intensive PDF processing/rendering or memory-sensitive operations.
+
+C# may be used where there is a clear technical benefit, but do not introduce unnecessary languages or frameworks merely for variety.
+
+JavaScript/TypeScript may only be used for a subsystem where they provide a genuine architectural advantage; they must not turn the application into a WebView/web application.
+
+Use the correct Android-native architecture around these components and ensure all parts integrate reliably.
+
+Before implementation, analyze the architecture and select the best technology for each component based on:
+- Performance
+- RAM usage
+- CPU usage
+- Android compatibility
+- Stability
+- Offline operation
+- Maintainability
+- APK size
+- Long-term scalability
+
+Explain the architectural decisions briefly before implementation.
+
+## 2. CORE PDF APPLICATION
+
+Create a fully functional PDF application capable of:
+
+- Importing PDF files from the device.
+- Creating PDFs by combining images.
+- Adding/importing images into an existing PDF.
+- Managing PDF pages.
+- Deleting pages.
+- Adding pages.
+- Reordering pages.
+- Moving pages to different positions.
+- Opening and viewing large PDF files efficiently.
+- Smooth navigation between pages.
+- Correct PDF rendering with accurate dimensions and quality.
+
+Use a professional, reliable PDF rendering/processing engine rather than implementing a simplistic demo renderer.
+
+## 3. FILE IMPORT AND PERMISSIONS
+
+Import files through Android's official system file picker.
+
+DO NOT request broad storage permissions merely to import PDFs.
+
+The user should explicitly select a file from the device, and the application should receive access only to the selected file according to Android's modern permission/storage model.
+
+Design the file-access architecture to work correctly on modern Android versions.
+
+## 4. CHUNK LOADING / MEMORY OPTIMIZATION
+
+Implement a real PDF page virtualization/chunk-loading system.
+
+NEVER load an entire large PDF into RAM merely because the user opened it.
+
+Maintain a sliding window around the currently visible page:
+
+- 5 pages before the current page
+- Current page
+- 5 pages after the current page
+
+Therefore, normally maintain approximately an 11-page active rendering window, subject to adaptive memory management.
+
+When the user moves forward:
+- Preload the next required page.
+- Add it to the appropriate side of the active window.
+- Remove/release pages that are now outside the required window.
+
+When the user moves backward:
+- Preload the previous required page.
+- Add it to the opposite side.
+- Release pages that are no longer required.
+
+The system must:
+- Avoid unnecessary bitmap retention.
+- Release unused rendering resources promptly.
+- Reuse resources where appropriate.
+- Adapt to different page sizes and device RAM.
+- Avoid excessive CPU usage.
+- Preload intelligently so page turning feels immediate.
+- Prevent memory leaks.
+- Avoid loading the complete PDF into memory.
+
+The user should not have to manually manage this system.
+
+## 5. PAGE TURNING
+
+Implement edge/side page turning rather than an abrupt page replacement.
+
+The user should be able to swipe the page toward the corresponding side of the screen.
+
+The animation must:
+- Follow the user's finger naturally.
+- Respond proportionally to swipe distance and velocity.
+- Be smooth and fluid.
+- Complete or cancel naturally depending on the gesture.
+- Work correctly with the chunk-loading system.
+- Avoid frame drops and visual tearing.
+
+The result should feel like a polished modern PDF/Notebook reader rather than a simple "next page" button.
+
+## 6. ZOOM
+
+Add professional PDF zoom controls.
+
+Requirements:
+- Default zoom: 100%
+- Minimum zoom: 25%
+- Maximum zoom: 300%
+- Display the current zoom percentage in a dedicated top-area control.
+- Allow the user to change the zoom level.
+- Add a lock icon beside the zoom percentage.
+- When zoom is locked, prevent accidental zoom-level changes through the relevant control/interaction.
+
+The zoom system must be functional and smoothly render the PDF at different scales without unnecessary memory consumption.
+
+## 7. PAGE MANAGEMENT TOOLBAR
+
+Create a professional top toolbar for page management.
+
+Include appropriate controls for:
+- Delete page
+- Add page
+- Reorder pages
+- Move pages
+- Other essential page-management actions when appropriate
+
+Do not overcrowd the toolbar.
+
+Organize actions according to professional PDF-app UX principles.
+
+## 8. NO PEN/DRAWING SYSTEM
+
+DO NOT add:
+- Pens
+- Pencils
+- Markers
+- Highlighters
+- Drawing tools
+- Annotation pen systems
+
+These will be developed later as a completely separate project.
+
+Do not create placeholder drawing tools merely to fill space.
+
+## 9. NOTEBOOK EXPERIENCE
+
+The application should also provide a Notebook-oriented experience where appropriate while keeping the PDF system as a real document system.
+
+The interface should feel cohesive between PDF and Notebook functionality without making the application look like a generic website.
+
+## 10. PROFESSIONAL UI/UX
+
+Design the application as if it were created by an experienced professional developer specializing in PDF and Notebook applications.
+
+DO NOT place every feature on one screen.
+
+Do not create a giant page containing every control.
+
+Instead:
+- Group related functionality.
+- Give complex functions their own appropriate sections/screens/panels.
+- Place controls where users naturally expect them.
+- Use contextual controls when appropriate.
+- Keep frequently used actions accessible.
+- Hide advanced/infrequent actions behind logically organized menus.
+- Maintain consistent navigation.
+- Use proper spacing, hierarchy, icons, typography, and touch targets.
+- Avoid random feature placement.
+- Avoid unnecessary menus.
+- Avoid visual clutter.
+
+The final UX should feel deliberate, mature, polished, and purpose-built for mobile PDF usage.
+
+## 11. SETTINGS
+
+Create a dedicated Settings section.
+
+Include:
+
+### Appearance / Themes
+- Light theme
+- Dark theme
+- System theme that follows Android's system appearance
+- Multiple selectable icon-color schemes
+
+Theme changes should apply consistently throughout the application.
+
+### Data
+Provide a clearly labeled option to delete locally stored application data.
+
+Before destructive deletion:
+- Show a clear confirmation dialog.
+- Explain what will be deleted.
+- Prevent accidental deletion.
+
+### Terms
+Provide a section for reading the application's Terms and Conditions.
+
+## 12. OFFLINE-FIRST REQUIREMENT
+
+The application must remain fully functional without internet access.
+
+Do not introduce unnecessary:
+- Servers
+- Cloud databases
+- Online APIs
+- Remote rendering
+- Web dependencies
+- Account systems
+- Online synchronization
+
+All necessary PDF processing and application functionality should operate locally on the Android device.
+
+## 13. PERFORMANCE REQUIREMENTS
+
+Optimize specifically for mobile hardware.
+
+Pay special attention to:
+- RAM
+- CPU
+- GPU rendering
+- Battery consumption
+- Large PDFs
+- Large page dimensions
+- High-resolution images
+- Rapid page navigation
+- Repeated page turning
+- Zooming
+- Background preprocessing
+- Resource release
+
+Use background processing for expensive operations where appropriate without blocking the UI thread.
+
+The UI must remain responsive during PDF processing.
+
+## 14. ERROR HANDLING
+
+Implement robust handling for:
+- Corrupted PDFs
+- Unsupported PDFs
+- Very large PDFs
+- Invalid images
+- Failed page rendering
+- Insufficient memory
+- File-access failures
+- Missing permissions/access grants
+- Interrupted operations
+
+Errors must be communicated clearly to the user without exposing technical stack traces unnecessarily.
+
+## 15. DATA SAFETY
+
+Because the application is offline-first:
+- Keep document-related processing local.
+- Do not upload user documents anywhere.
+- Do not transmit document contents to external services.
+- Clearly separate temporary rendering/cache data from persistent user data.
+- Clean temporary resources appropriately.
+
+## 16. DEVELOPMENT PROCESS
+
+Before writing the implementation:
+
+1. Analyze all requirements.
+2. Design the complete application architecture.
+3. Design the navigation structure.
+4. Design the screen hierarchy.
+5. Design the PDF rendering architecture.
+6. Design the chunk-loading/memory-management architecture.
+7. Design the page-turning system.
+8. Design the storage/file-access architecture using Android's modern file picker.
+9. Select the appropriate technology for each subsystem.
+10. Identify performance bottlenecks and mitigation strategies.
+11. Then implement the application.
+
+Do not sacrifice real functionality for visual appearance.
+
+## 17. QUALITY STANDARD
+
+Treat this as a serious production Android application.
+
+Every feature must be:
+- Implemented
+- Connected to the underlying logic
+- Tested conceptually against realistic usage
+- Compatible with the rest of the architecture
+- Designed for touch interaction
+- Robust against edge cases
+
+Do not output fake buttons, placeholder functionality, pseudo-code presented as finished implementation, or decorative controls that do nothing.
+
+When making architectural decisions, choose the simplest reliable solution that satisfies the requirements rather than adding complexity for its own sake.
+
+The final result should be a polished, professional, offline Android PDF + Notebook application optimized for large documents and limited mobile resources.
+“Aim for the highest-quality result possible. Think deeply, optimize every technical and design decision, and deliver the most professional, efficient, polished, and production-ready implementation you can.”
