@@ -1,0 +1,1 @@
+- [Android build storage](android-build-storage.md) — keep Android SDK and Gradle caches on the workspace volume, not the quota-limited temp/home volume.
