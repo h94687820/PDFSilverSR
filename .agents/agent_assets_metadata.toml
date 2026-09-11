@@ -14,3 +14,17 @@ mtime_ms = 1789050748656
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:29684ca0-2d19-4665-a3ad-9f656d7ca45d/74e78257-4164-402a-a1a9-dd3aacac6f86/83ee9458-e5d6-41b7-a42c-bc92c31425d1"
 storage_version_token = "1789050772278616"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "l1jAaSnA9Tkinpio89N0F"
+uri = "file://PDFSilverSR.apk"
+type = "unspecified"
+title = "PDFSilverSR.apk"
+description = "Installable arm64-v8a Android debug APK stored at the repository root. SHA-256: 465af2e919de5a0be566e388d2941232a4e1864d49d6bb1ce025c251baf5d2b3"
+logical_id = "e30471d5-bb92-43f6-9698-5f513f45aa1c"
+content_hash = "sha256:465af2e919de5a0be566e388d2941232a4e1864d49d6bb1ce025c251baf5d2b3"
+size = 88134991
+mtime_ms = 1789111259978
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:29684ca0-2d19-4665-a3ad-9f656d7ca45d/e30471d5-bb92-43f6-9698-5f513f45aa1c/0bfa16ea-4978-4a59-b01e-52ebaab4b8e7"
+storage_version_token = "1789111285174984"
+content_type = "application/octet-stream"
