@@ -28,3 +28,17 @@ mtime_ms = 1789111259978
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:29684ca0-2d19-4665-a3ad-9f656d7ca45d/e30471d5-bb92-43f6-9698-5f513f45aa1c/0bfa16ea-4978-4a59-b01e-52ebaab4b8e7"
 storage_version_token = "1789111285174984"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "cQeOuS7w3_PXh3JosY-Gm"
+uri = "file://PDFSilverSR.zip"
+type = "unspecified"
+title = "PDFSilverSR.zip"
+description = "ZIP archive containing only the PDFSilverSR.apk application. Stored at the repository root."
+logical_id = "0ad11f4b-ed24-4678-a686-d2b9d5483da3"
+content_hash = "sha256:cbb515c7996f3fed232887fa069b94ab783d0620792bcac088dc4caa3b2cc1c8"
+size = 37842790
+mtime_ms = 1789111363431
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:29684ca0-2d19-4665-a3ad-9f656d7ca45d/0ad11f4b-ed24-4678-a686-d2b9d5483da3/c2bd6aa0-7637-46e1-866b-159a2479337d"
+storage_version_token = "1789111372199753"
+content_type = "application/octet-stream"
