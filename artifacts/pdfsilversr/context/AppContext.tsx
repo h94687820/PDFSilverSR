@@ -19,8 +19,8 @@ interface AppContextValue extends StoredState {
   isReady: boolean;
   importPdf: () => Promise<void>;
   importImagesAsPdf: () => Promise<void>;
-  appendImagesToDocument: (document: DocumentRecord) => Promise<void>;
-  updateDocument: (document: DocumentRecord) => void;
+  appendImagesToDocument: (documentId: string) => Promise<void>;
+  updateDocument: (document: DocumentRecord | ((current: DocumentRecord) => DocumentRecord)) => void;
   deleteAllData: () => Promise<void>;
   addNotebook: () => NotebookRecord;
   updateNotebook: (notebook: NotebookRecord) => void;
@@ -46,6 +46,16 @@ const defaultState: StoredState = {
 const AppContext = createContext<AppContextValue | null>(null);
 
 const makeId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+async function copyImageToAppStorage(uri: string) {
+  const localDir = `${FileSystem.documentDirectory}pdfsilversr/images/`;
+  const sourceExtension = uri.split('?')[0].split('.').pop()?.toLowerCase();
+  const extension = sourceExtension && /^[a-z0-9]{2,5}$/.test(sourceExtension) ? sourceExtension : 'jpg';
+  const localUri = `${localDir}${makeId('image')}.${extension}`;
+  await FileSystem.makeDirectoryAsync(localDir, { intermediates: true });
+  await FileSystem.copyAsync({ from: uri, to: localUri });
+  return localUri;
+}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<StoredState>(defaultState);
@@ -114,11 +124,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     if (result.canceled || !result.assets.length) return;
 
-    const pages: PageRecord[] = result.assets.map((asset) => ({
-      id: makeId('page'),
-      kind: 'image',
-      imageUri: asset.uri,
-    }));
+    let pages: PageRecord[];
+    try {
+      pages = await Promise.all(result.assets.map(async (asset) => ({
+        id: makeId('page'),
+        kind: 'image' as const,
+        imageUri: await copyImageToAppStorage(asset.uri),
+      })));
+    } catch {
+      Alert.alert('Could not import images', 'The selected images could not be copied into local storage.');
+      return;
+    }
     const now = Date.now();
     const record: DocumentRecord = {
       id: makeId('document'),
@@ -132,27 +148,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState((current) => ({ ...current, documents: [record, ...current.documents] }));
   }, []);
 
-  const updateDocument = useCallback((document: DocumentRecord) => {
+  const updateDocument = useCallback((documentOrUpdater: DocumentRecord | ((current: DocumentRecord) => DocumentRecord)) => {
     setState((current) => ({
       ...current,
-      documents: current.documents.map((item) => (item.id === document.id ? document : item)),
+      documents: current.documents.map((item) => {
+        const next = typeof documentOrUpdater === 'function' ? documentOrUpdater(item) : documentOrUpdater;
+        return next.id === item.id ? next : item;
+      }),
     }));
   }, []);
 
-  const appendImagesToDocument = useCallback(async (document: DocumentRecord) => {
+  const appendImagesToDocument = useCallback(async (documentId: string) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 1,
     });
     if (result.canceled || !result.assets.length) return;
-    const pages: PageRecord[] = result.assets.map((asset) => ({
-      id: makeId('page'),
-      kind: 'image',
-      imageUri: asset.uri,
+    let pages: PageRecord[];
+    try {
+      pages = await Promise.all(result.assets.map(async (asset) => ({
+        id: makeId('page'),
+        kind: 'image' as const,
+        imageUri: await copyImageToAppStorage(asset.uri),
+      })));
+    } catch {
+      Alert.alert('Could not import images', 'The selected images could not be copied into local storage.');
+      return;
+    }
+    setState((current) => ({
+      ...current,
+      documents: current.documents.map((item) => item.id === documentId ? { ...item, pages: [...item.pages, ...pages] } : item),
     }));
-    updateDocument({ ...document, pages: [...document.pages, ...pages] });
-  }, [updateDocument]);
+  }, []);
 
   const deleteAllData = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);

@@ -43,7 +43,7 @@ export default function ReaderScreen() {
       pdfRef.current?.setPage(next + 1);
     }
     const now = Date.now();
-    updateDocument({ ...document, lastOpenedAt: now });
+    updateDocument((current) => current.id === document.id ? { ...current, lastOpenedAt: now } : current);
   };
 
   const panResponder = useRef(PanResponder.create({
@@ -63,14 +63,14 @@ export default function ReaderScreen() {
     setPdfError(null);
     setPdfPageCount(numberOfPages);
     if (document.pages.length !== numberOfPages || document.pages.some((page) => page.kind !== 'pdf')) {
-      updateDocument({
-        ...document,
+      updateDocument((current) => current.id === document.id ? {
+        ...current,
         pages: Array.from({ length: numberOfPages }, (_, index) => ({
-          id: `${document.id}-page-${index + 1}`,
+          id: `${current.id}-page-${index + 1}`,
           kind: 'pdf' as const,
         })),
         lastOpenedAt: Date.now(),
-      });
+      } : current);
     }
   };
   const handlePdfPageChanged = (page: number, numberOfPages: number) => {
@@ -80,17 +80,21 @@ export default function ReaderScreen() {
   const movePage = (direction: -1 | 1) => {
     const target = selectedPage + direction;
     if (target < 0 || target >= document.pages.length) return;
-    const pages = [...document.pages];
-    [pages[selectedPage], pages[target]] = [pages[target], pages[selectedPage]];
-    updateDocument({ ...document, pages });
+    updateDocument((current) => {
+      if (current.id !== document.id) return current;
+      const pages = [...current.pages];
+      [pages[selectedPage], pages[target]] = [pages[target], pages[selectedPage]];
+      return { ...current, pages };
+    });
     setSelectedPage(target);
     if (pageIndex === selectedPage) setPageIndex(target);
   };
   const addPage = () => {
-    const pages = [...document.pages, { id: `page-${Date.now()}`, kind: 'blank' as const }];
-    updateDocument({ ...document, pages });
-    setSelectedPage(pages.length - 1);
-    setPageIndex(pages.length - 1);
+    const newPage = { id: `page-${Date.now()}`, kind: 'blank' as const };
+    const newPageIndex = document.pages.length;
+    updateDocument((current) => current.id === document.id ? { ...current, pages: [...current.pages, newPage] } : current);
+    setSelectedPage(newPageIndex);
+    setPageIndex(newPageIndex);
     setManageOpen(false);
   };
   const deletePage = () => {
@@ -98,10 +102,21 @@ export default function ReaderScreen() {
       Alert.alert('Keep one page', 'A document needs at least one page.');
       return;
     }
-    const pages = document.pages.filter((_, index) => index !== selectedPage);
-    updateDocument({ ...document, pages });
+    const nextPageCount = document.pages.length - 1;
+    updateDocument((current) => current.id === document.id
+      ? { ...current, pages: current.pages.filter((_, index) => index !== selectedPage) }
+      : current);
     setSelectedPage(Math.max(0, selectedPage - 1));
-    setPageIndex(Math.min(pageIndex, pages.length - 1));
+    setPageIndex(Math.min(pageIndex, nextPageCount - 1));
+  };
+
+  const changeZoom = (delta: number) => {
+    if (settings.zoomLocked) return;
+    setZoom((current) => clamp(current + delta, 25, 300));
+  };
+  const handlePdfScaleChanged = (scale: number) => {
+    if (settings.zoomLocked) return;
+    setZoom(clamp(Math.round(scale * 100), 25, 300));
   };
 
   return (
@@ -113,7 +128,7 @@ export default function ReaderScreen() {
       </View>
       <View style={[styles.toolrow, { borderBottomColor: colors.border }]}>
         <Pressable accessibilityLabel="Previous page" onPress={() => goToPage(pageIndex - 1)} style={styles.tool}><Feather name="chevron-left" size={19} color={pageIndex === 0 ? colors.border : colors.foreground} /></Pressable>
-        <View style={[styles.zoomControl, { backgroundColor: colors.card, borderColor: colors.border }]}><Pressable accessibilityLabel="Decrease zoom" disabled={settings.zoomLocked} onPress={() => setZoom(clamp(zoom - 25, 25, 300))}><Feather name="minus" size={15} color={settings.zoomLocked ? colors.border : colors.foreground} /></Pressable><Text style={[styles.zoomText, { color: colors.foreground }]}>{zoom}%</Text><Pressable accessibilityLabel="Increase zoom" disabled={settings.zoomLocked} onPress={() => setZoom(clamp(zoom + 25, 25, 300))}><Feather name="plus" size={15} color={settings.zoomLocked ? colors.border : colors.foreground} /></Pressable><Pressable accessibilityLabel={settings.zoomLocked ? 'Unlock zoom' : 'Lock zoom'} onPress={() => setZoomLocked(!settings.zoomLocked)}><Feather name={settings.zoomLocked ? 'lock' : 'unlock'} size={14} color={settings.zoomLocked ? colors.primary : colors.mutedForeground} /></Pressable></View>
+         <View style={[styles.zoomControl, { backgroundColor: colors.card, borderColor: colors.border }]}><Pressable accessibilityLabel="Decrease zoom" disabled={settings.zoomLocked} onPress={() => changeZoom(-25)}><Feather name="minus" size={15} color={settings.zoomLocked ? colors.border : colors.foreground} /></Pressable><Text style={[styles.zoomText, { color: colors.foreground }]}>{zoom}%</Text><Pressable accessibilityLabel="Increase zoom" disabled={settings.zoomLocked} onPress={() => changeZoom(25)}><Feather name="plus" size={15} color={settings.zoomLocked ? colors.border : colors.foreground} /></Pressable><Pressable accessibilityLabel={settings.zoomLocked ? 'Unlock zoom' : 'Lock zoom'} onPress={() => setZoomLocked(!settings.zoomLocked)}><Feather name={settings.zoomLocked ? 'lock' : 'unlock'} size={14} color={settings.zoomLocked ? colors.primary : colors.mutedForeground} /></Pressable></View>
         <Pressable accessibilityLabel="Next page" onPress={() => goToPage(pageIndex + 1)} style={styles.tool}><Feather name="chevron-right" size={19} color={pageIndex === totalPages - 1 ? colors.border : colors.foreground} /></Pressable>
       </View>
       <View style={styles.readerArea} {...(isPdfDocument ? {} : panResponder.panHandlers)}>
@@ -132,13 +147,14 @@ export default function ReaderScreen() {
                 style={styles.pdfViewer}
                 page={pageIndex + 1}
                 scale={zoom / 100}
-                minScale={0.5}
-                maxScale={3}
+                 minScale={settings.zoomLocked ? zoom / 100 : 0.5}
+                 maxScale={settings.zoomLocked ? zoom / 100 : 3}
                 fitPolicy={2}
                 enablePaging
-                enableDoubleTapZoom
+                 enableDoubleTapZoom={!settings.zoomLocked}
                 onLoadComplete={handlePdfLoad}
                 onPageChanged={handlePdfPageChanged}
+                 onScaleChanged={handlePdfScaleChanged}
                 onError={(error) => setPdfError(error.message || 'The file could not be rendered.')}
               />
             </View>
@@ -154,7 +170,7 @@ export default function ReaderScreen() {
         <FlatList horizontal data={visiblePages} keyExtractor={({ page }) => page.id} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripContent} renderItem={({ item }) => <Pressable onPress={() => goToPage(item.index)} style={[styles.thumb, { backgroundColor: item.index === pageIndex ? colors.accent : colors.background, borderColor: item.index === pageIndex ? colors.primary : colors.border }]}><Text style={[styles.thumbNumber, { color: item.index === pageIndex ? colors.accentForeground : colors.mutedForeground }]}>{item.index + 1}</Text><View style={styles.thumbLines}><View style={styles.thumbLine} /><View style={styles.thumbLine} /><View style={styles.thumbLine} /></View></Pressable>} />
       </View>
       {!isPdfDocument && <Modal visible={manageOpen} transparent animationType="slide" onRequestClose={() => setManageOpen(false)}>
-        <View style={styles.modalBackdrop}><View style={[styles.modal, { backgroundColor: colors.card, paddingBottom: insets.bottom + 18 }]}><View style={styles.modalGrabber} /><View style={styles.modalHeader}><View><Text style={[styles.modalTitle, { color: colors.foreground }]}>Manage pages</Text><Text style={[styles.modalSub, { color: colors.mutedForeground }]}>Page {selectedPage + 1} selected</Text></View><Pressable onPress={() => setManageOpen(false)} style={styles.iconButton}><Feather name="x" size={19} color={colors.foreground} /></Pressable></View><View style={styles.manageRow}><Pressable onPress={() => movePage(-1)} accessibilityLabel="Move page left" style={[styles.manageButton, { borderColor: colors.border }]}><Feather name="arrow-left" size={18} color={colors.foreground} /><Text style={[styles.manageLabel, { color: colors.foreground }]}>Move earlier</Text></Pressable><Pressable onPress={() => movePage(1)} accessibilityLabel="Move page right" style={[styles.manageButton, { borderColor: colors.border }]}><Feather name="arrow-right" size={18} color={colors.foreground} /><Text style={[styles.manageLabel, { color: colors.foreground }]}>Move later</Text></Pressable></View><View style={styles.manageRow}><Pressable onPress={addPage} accessibilityLabel="Add blank page" style={[styles.manageButton, { borderColor: colors.primary, backgroundColor: colors.primary }]}><Feather name="plus" size={18} color={colors.primaryForeground} /><Text style={[styles.manageLabel, { color: colors.primaryForeground }]}>Add page</Text></Pressable><Pressable onPress={() => { setManageOpen(false); void appendImagesToDocument(document); }} accessibilityLabel="Import images into document" style={[styles.manageButton, { borderColor: colors.accentForeground, backgroundColor: colors.accent }]}><Feather name="image" size={18} color={colors.accentForeground} /><Text style={[styles.manageLabel, { color: colors.accentForeground }]}>Import images</Text></Pressable></View><View style={styles.manageRow}><Pressable onPress={deletePage} accessibilityLabel="Delete selected page" style={[styles.manageButton, { borderColor: colors.destructive, backgroundColor: colors.destructive }]}><Feather name="trash-2" size={18} color={colors.destructiveForeground} /><Text style={[styles.manageLabel, { color: colors.destructiveForeground }]}>Delete selected page</Text></Pressable></View></View></View>
+         <View style={styles.modalBackdrop}><View style={[styles.modal, { backgroundColor: colors.card, paddingBottom: insets.bottom + 18 }]}><View style={styles.modalGrabber} /><View style={styles.modalHeader}><View><Text style={[styles.modalTitle, { color: colors.foreground }]}>Manage pages</Text><Text style={[styles.modalSub, { color: colors.mutedForeground }]}>Page {selectedPage + 1} selected</Text></View><Pressable onPress={() => setManageOpen(false)} style={styles.iconButton}><Feather name="x" size={19} color={colors.foreground} /></Pressable></View><View style={styles.manageRow}><Pressable onPress={() => movePage(-1)} accessibilityLabel="Move page left" style={[styles.manageButton, { borderColor: colors.border }]}><Feather name="arrow-left" size={18} color={colors.foreground} /><Text style={[styles.manageLabel, { color: colors.foreground }]}>Move earlier</Text></Pressable><Pressable onPress={() => movePage(1)} accessibilityLabel="Move page right" style={[styles.manageButton, { borderColor: colors.border }]}><Feather name="arrow-right" size={18} color={colors.foreground} /><Text style={[styles.manageLabel, { color: colors.foreground }]}>Move later</Text></Pressable></View><View style={styles.manageRow}><Pressable onPress={addPage} accessibilityLabel="Add blank page" style={[styles.manageButton, { borderColor: colors.primary, backgroundColor: colors.primary }]}><Feather name="plus" size={18} color={colors.primaryForeground} /><Text style={[styles.manageLabel, { color: colors.primaryForeground }]}>Add page</Text></Pressable><Pressable onPress={() => { setManageOpen(false); void appendImagesToDocument(document.id); }} accessibilityLabel="Import images into document" style={[styles.manageButton, { borderColor: colors.accentForeground, backgroundColor: colors.accent }]}><Feather name="image" size={18} color={colors.accentForeground} /><Text style={[styles.manageLabel, { color: colors.accentForeground }]}>Import images</Text></Pressable></View><View style={styles.manageRow}><Pressable onPress={deletePage} accessibilityLabel="Delete selected page" style={[styles.manageButton, { borderColor: colors.destructive, backgroundColor: colors.destructive }]}><Feather name="trash-2" size={18} color={colors.destructiveForeground} /><Text style={[styles.manageLabel, { color: colors.destructiveForeground }]}>Delete selected page</Text></Pressable></View></View></View>
       </Modal>}
     </View>
   );
