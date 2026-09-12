@@ -14,3 +14,9 @@ Release builds for this Expo/RN stack can exhaust the session while compiling al
 **Why:** Compiling every ABI caused the native release build to lose its session after the JavaScript bundle had already been generated; the arm64 release completed successfully.
 
 **How to apply:** Keep the release command configurable by `ANDROID_ARCHITECTURES`, with `arm64-v8a` as the default.
+
+Workspace-backed build caches must also be gitignored.
+
+**Why:** Large untracked Gradle cache trees can make the Git/checkpoint scanner appear to download or hang even when workspace disk space is available.
+
+**How to apply:** Put Gradle user-home caches in an ignored workspace directory and remove disposable duplicate cache trees after a completed release build.

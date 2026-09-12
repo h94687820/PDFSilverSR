@@ -51,4 +51,6 @@ Thumbs.db
 # Local Android build toolchain cache
 /.build-cache/
 /.android-sdk/
+/.gradle/
+/artifacts/.gradle/
 /.gradle-cache/
